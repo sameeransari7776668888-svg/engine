@@ -1,0 +1,76 @@
+var PlayerController = pc.createScript('playerController');
+
+// Game Variables
+PlayerController.attributes.add('speed', { type: 'number', default: 5 });
+PlayerController.attributes.add('hp', { type: 'number', default: 200 });
+PlayerController.attributes.add('joystickForce', { type: 'vec2', default: [0, 0] });
+
+PlayerController.prototype.initialize = function() {
+    this.entity.collision.on('collisionstart', this.onCollision, this);
+    
+    // Mobile Touch UI logic
+    this.setupMobileControls();
+    
+    // Weapon System (List of 100+ weapons placeholder)
+    this.currentWeapon = "AK-47";
+    this.isFiring = false;
+};
+
+// 1. Mobile Joystick Logic
+PlayerController.prototype.setupMobileControls = function() {
+    var self = this;
+    window.addEventListener('touchstart', function(e) {
+        self.isFiring = true; // Simple touch-to-fire logic
+    });
+    
+    window.addEventListener('touchend', function(e) {
+        self.isFiring = false;
+        self.joystickForce.set(0, 0);
+    });
+};
+
+// 2. Physics & Movement (Frame by Frame)
+PlayerController.prototype.update = function(dt) {
+    // Agar mobile joystick move ho rahi hai
+    if (this.joystickForce.length() > 0) {
+        let forward = this.entity.forward.clone().scale(-this.joystickForce.y);
+        let right = this.entity.right.clone().scale(this.joystickForce.x);
+        let movement = forward.add(right);
+        
+        this.entity.rigidbody.applyForce(movement.scale(this.speed));
+    }
+
+    // Shooting Damage logic
+    if (this.isFiring) {
+        this.fireWeapon();
+    }
+};
+
+// 3. Shooting & Damage System
+PlayerController.prototype.fireWeapon = function() {
+    // Raycasting (Physics logic to check hit)
+    var from = this.entity.getPosition();
+    var to = this.entity.forward.clone().scale(100).add(from);
+    
+    var result = this.app.systems.rigidbody.raycastFirst(from, to);
+    if (result) {
+        console.log("Hit Enemy: " + result.entity.name);
+        // Damage effect yahan dikhayein
+        this.showDamagePopup(result.point);
+    }
+};
+
+// 4. Damage Visualization
+PlayerController.prototype.showDamagePopup = function(pos) {
+    // Yahan hum screen par "45", "110" jaise numbers dikha sakte hain
+    console.log("Damage 45! at " + pos.x);
+};
+
+// 5. HP Bar Update
+PlayerController.prototype.takeDamage = function(amount) {
+    this.hp -= amount;
+    if (this.hp <= 0) {
+        alert("Game Over! Respawning...");
+        this.hp = 200;
+    }
+};
